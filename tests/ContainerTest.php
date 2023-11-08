@@ -5,128 +5,106 @@ declare(strict_types=1);
 namespace MicroContainer\Tests;
 
 use MicroContainer\Container;
-use MicroContainer\Tests\Stubs\Inner\Deep\Dependency;
+use MicroContainer\NotFoundException;
 use PHPUnit\Framework\TestCase;
-use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
+
+require_once __DIR__ . '/stubs.php';
 
 class ContainerTest extends TestCase
 {
-    function testNotFoundDefs()
+    public function testHasEntry()
+    {
+        $container = new Container([Foo::class => Foo::class]);
+        $this->assertTrue($container->has(Foo::class));
+        $this->assertFalse($container->has('foo'));
+    }
+
+    public function testThrowsExceptionWhenEntryNotFound()
+    {
+        $this->expectException(NotFoundExceptionInterface::class);
+        $this->expectExceptionMessage("No entry was found for 'foo.class' identifier");
+        $container = new Container();
+        $container->get('foo.class');
+    }
+
+    public function testThrowsExceptionWhenPrimitiveNotHasDefaultValue()
     {
         $this->expectException(NotFoundExceptionInterface::class);
         $container = new Container();
-        $container->get('invalidDefinition');
+        $container->get(Foo::class);
     }
 
-    function testBuildContainerRawValues()
+    public function testShouldResolveWithDefinition()
     {
         $container = new Container([
-            'foo' => 1,
-            'bar' => 2
+            Foo::class => fn () => new Foo('fooString', new \stdClass),
+            'foo.alias' => Foo::class
         ]);
 
-        $this->assertEquals(1, $container->get('foo'));
-        $this->assertEquals(2, $container->get('bar'));
+        $this->assertInstanceOf(Foo::class, $service = $container->get(Foo::class));
+        $this->assertSame($service, $container->get('foo.alias'));
     }
 
-    function testBuildContainerClassDefs()
+    public function testThrowsExceptionWhenInterfaceHasNoDefinition()
     {
-        $container = new Container([
-            'foo' => 'foostring',
-            \stdClass::class => fn () => new \stdClass,
-            Foo::class => fn (Container $c) => new Foo($c->get('foo'), $c->get(\stdClass::class)),
-            Bar::class => fn (Container $c) => new Bar($c->get(Foo::class))
-        ]);
+        $expectedMessage = "Target '" . FooInterface::class . "' is not instantiable";
 
-        $fooValue = $container->get('foo');
-        $stdDep   = $container->get(\stdClass::class);
-        $fooObj   = $container->get(Foo::class);
-        $barObj   = $container->get(Bar::class);
-
-        $this->assertEquals('foostring', $fooValue);
-        $this->assertInstanceOf(\stdClass::class, $stdDep);
-        $this->assertInstanceOf(Foo::class, $fooObj);
-        $this->assertEquals($fooValue, $fooObj->foo);
-        $this->assertSame($stdDep, $fooObj->stdDep);
-        $this->assertInstanceOf(Bar::class, $barObj);
-        $this->assertSame($fooObj, $barObj->fooDep);
+        try {
+            $container = new Container();
+            $container->get(FooInterface::class);
+        } catch (NotFoundException $e) {
+            $this->assertEquals($expectedMessage, $e->getPrevious()?->getMessage());
+        }
     }
 
-    function testBuildDepsWithAutowiring()
+    public function testShouldResolveInterfaceEntry()
     {
+        $foo = new Foo('fooString', new \stdClass);
         $container = new Container([
-            'foo' => 'foostring',
-            \stdClass::class => fn () => new \stdClass,
-            Foo::class => Foo::class,
-            'foo.service' => fn (Container $c) => $c->get(Foo::class),
-            FooInterface::class => Foo::class,
-            Bar::class => Bar::class,
-            Baz::class => Baz::class
+            Foo::class => fn () => $foo,
+            FooInterface::class => Foo::class
         ]);
 
-        $fooValue = $container->get('foo');
-        $stdDep   = $container->get(\stdClass::class);
-        $fooObj   = $container->get(FooInterface::class);
-        $barObj   = $container->get(Bar::class);
-        $bazObj   = $container->get(Baz::class);
-
-        $this->assertEquals('foostring', $fooValue);
-        $this->assertInstanceOf(\stdClass::class, $stdDep);
-        $this->assertInstanceOf(Foo::class, $fooObj);
-        $this->assertEquals($fooValue, $fooObj->foo);
-        $this->assertSame($stdDep, $fooObj->stdDep);
-        $this->assertInstanceOf(Bar::class, $barObj);
-        $this->assertNotSame($fooObj, $barObj->fooDep);
-        $this->assertInstanceOf(Baz::class, $bazObj);
+        $service = $container->get(FooInterface::class);
+        $this->assertInstanceOf(FooInterface::class, $service);
+        $this->assertSame($service, $foo);
     }
 
-    function testContainerAsSelfDependency()
+    public function testShouldResolveWithClassString()
     {
+        $foo = new Foo('fooString', new \stdClass);
         $container = new Container([
-            'container.dep' => ContainerDep::class
+            Foo::class => fn () => $foo,
+            Bar::class => Bar::class
         ]);
 
-        $service = $container->get('container.dep');
+        $service = $container->get(Bar::class);
+        $this->assertInstanceOf(Bar::class, $service);
+        $this->assertSame($foo, $service->foo);
+    }
+
+    public function testShouldResolveContainerAware()
+    {
+        $container = new Container([ContainerAware::class => ContainerAware::class]);
+        $service = $container->get(ContainerAware::class);
         $this->assertSame($container, $service->container);
     }
-}
 
-class Foo implements FooInterface
-{
-    public function __construct(
-        public string $foo,
-        public \stdClass $stdDep
-    ) {
-    }
-}
-
-class Bar
-{
-    public function __construct(public Foo $fooDep)
+    public function testShouldResolveWithAutowiring()
     {
-    }
-}
+        $foo = new Foo('fooString', new \stdClass);
+        $container = new Container([
+            Foo::class => fn () => $foo,
+            FooInterface::class => Foo::class
+        ]);
 
-
-class Baz
-{
-    public function __construct(
-        public string $name = 'Default Value',
-        public Foo $foo,
-        public Bar $bar,
-        public Dependency $dependency
-    ) {
-    }
-}
-
-interface FooInterface
-{
-}
-
-class ContainerDep
-{
-    public function __construct(public ContainerInterface $container)
-    {
+        $service = $container->get(Baz::class);
+        $this->assertInstanceOf(Baz::class, $service);
+        $this->assertSame($foo, $service->foo);
+        $this->assertSame($container, $service->containerAware->container);
+        $this->assertSame($service->containerAware, $container->get(ContainerAware::class));
+        $this->assertInstanceOf(Bar::class, $service->bar);
+        $this->assertSame($service->bar, $container->get(Bar::class));
     }
 }

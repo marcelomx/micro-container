@@ -10,86 +10,81 @@ class Container implements ContainerInterface
 {
     private array $instances = [];
 
-    public function __construct(private array $defs = [])
+    public function __construct(private array $definitions = [])
     {
+        $this->instances[ContainerInterface::class] = $this;
     }
 
-    public function get(string $id)
+    /**
+     * @template T
+     * @param class-string<T> $id
+     * @return T
+     * @throws \MicroContainer\NotFoundException
+     */
+    public function get(string $id): object
     {
-        if (!$this->has($id)) {
-            throw new NotFoundException(
-                sprintf('No entry was found for "%s" identifier', $id)
-            );
-        }
-
         if (isset($this->instances[$id])) {
             return $this->instances[$id];
         }
 
-        $def = $this->defs[$id];
+        $definition = $this->definitions[$id] ?? $id;
 
-        if (is_string($def) && class_exists($def)) {
-            $def = function () use ($def) {
-                $refClass = new \ReflectionClass($def);
-
-                return $refClass->newInstanceArgs(
-                    $this->resolveClassParams($refClass)
-                );
-            };
+        if (\is_string($definition) && $definition !== $id) {
+            return $this->get($definition);
         }
 
-        if (\is_callable($def)) {
-            $newInstance = $def($this);
-
-            return $this->registerNewInstance(
-                $newInstance,
-                $id,
-                get_class($newInstance)
-            );
+        try {
+            $this->instances[$id] = $this->resolve($definition);
+        } catch (\Exception $e) {
+            throw NotFoundException::forEntry($id, $e);
         }
 
-        return $def;
+        return $this->instances[$id];
     }
 
     public function has(string $id): bool
     {
-        return isset($this->defs[$id]);
+        return isset($this->instances[$id])
+            || isset($this->definitions[$id]);
     }
 
-    private function resolveClassParams(\ReflectionClass $refClass): array
+    private function resolve(string|callable $definition): object
     {
-        $constructor = $refClass->getConstructor();
-
-        return !$constructor
-            ? []
-            : array_map(function (\ReflectionParameter $p) {
-                $type = $p->getType();
-
-                if ($type->isBuiltin()) {
-                    return $p->isDefaultValueAvailable()
-                        ? $p->getDefaultValue()
-                        : $this->get($p->getName());
-                }
-
-                $classDef = $type->getName();
-                $this->defs[$classDef] = $this->defs[$classDef] ?? $classDef;
-
-                return $this->get($classDef);
-            }, $constructor->getParameters());
-    }
-
-    private function registerNewInstance($newInstance, $id, $classDef): object
-    {
-        $this->instances[$id] = $newInstance;
-
-        if (
-            !isset($this->instances[$classDef])
-            && $classDef !== $id
-            && !$this->has($classDef)
-        ) {
-            $this->instances[$classDef] = $newInstance;
+        if (\is_callable($definition)) {
+            return $definition($this);
         }
 
-        return $newInstance;
+        try {
+            $reflectionClass = new \ReflectionClass($definition);
+        } catch (\ReflectionException) {
+            throw ContainerException::classNotExists($definition);
+        }
+
+        if (!$reflectionClass->isInstantiable()) {
+            throw ContainerException::notInstantiable($definition);
+        }
+
+        return new $definition(...$this->resolveDependencies(
+            $reflectionClass->getConstructor()?->getParameters() ?? []
+        ));
+    }
+
+    /** @param \ReflectionParameter[] $parameters */
+    private function resolveDependencies(array $parameters): array
+    {
+        $results = [];
+
+        foreach ($parameters as $parameter) {
+            /** @var \ReflectionNamedType */
+            $type = $parameter->getType();
+
+            $results[] = match (true) {
+                $parameter->isDefaultValueAvailable() => $parameter->getDefaultValue(),
+                $parameter->isVariadic() => [],
+                default => $this->get($type->getName())
+            };
+        }
+
+        return $results;
     }
 }
