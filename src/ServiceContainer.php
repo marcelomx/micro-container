@@ -6,7 +6,7 @@ namespace MicroContainer;
 
 use Psr\Container\ContainerInterface;
 
-class Container implements ContainerInterface
+class ServiceContainer implements ContainerInterface
 {
     private array $instances = [];
 

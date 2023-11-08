@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace MicroContainer\Tests;
 
-use MicroContainer\Container;
+use MicroContainer\ServiceContainer;
 use MicroContainer\NotFoundException;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\NotFoundExceptionInterface;
 
 require_once __DIR__ . '/stubs.php';
 
-class ContainerTest extends TestCase
+class ServiceContainerTest extends TestCase
 {
     public function testHasEntry()
     {
-        $container = new Container([Foo::class => Foo::class]);
+        $container = new ServiceContainer([Foo::class => Foo::class]);
         $this->assertTrue($container->has(Foo::class));
         $this->assertFalse($container->has('foo'));
     }
@@ -24,20 +24,20 @@ class ContainerTest extends TestCase
     {
         $this->expectException(NotFoundExceptionInterface::class);
         $this->expectExceptionMessage("No entry was found for 'foo.class' identifier");
-        $container = new Container();
+        $container = new ServiceContainer();
         $container->get('foo.class');
     }
 
     public function testThrowsExceptionWhenPrimitiveNotHasDefaultValue()
     {
         $this->expectException(NotFoundExceptionInterface::class);
-        $container = new Container();
+        $container = new ServiceContainer();
         $container->get(Foo::class);
     }
 
     public function testShouldResolveWithDefinition()
     {
-        $container = new Container([
+        $container = new ServiceContainer([
             Foo::class => fn () => new Foo('fooString', new \stdClass),
             'foo.alias' => Foo::class
         ]);
@@ -51,7 +51,7 @@ class ContainerTest extends TestCase
         $expectedMessage = "Target '" . FooInterface::class . "' is not instantiable";
 
         try {
-            $container = new Container();
+            $container = new ServiceContainer();
             $container->get(FooInterface::class);
         } catch (NotFoundException $e) {
             $this->assertEquals($expectedMessage, $e->getPrevious()?->getMessage());
@@ -61,7 +61,7 @@ class ContainerTest extends TestCase
     public function testShouldResolveInterfaceEntry()
     {
         $foo = new Foo('fooString', new \stdClass);
-        $container = new Container([
+        $container = new ServiceContainer([
             Foo::class => fn () => $foo,
             FooInterface::class => Foo::class
         ]);
@@ -74,7 +74,7 @@ class ContainerTest extends TestCase
     public function testShouldResolveWithClassString()
     {
         $foo = new Foo('fooString', new \stdClass);
-        $container = new Container([
+        $container = new ServiceContainer([
             Foo::class => fn () => $foo,
             Bar::class => Bar::class
         ]);
@@ -86,7 +86,7 @@ class ContainerTest extends TestCase
 
     public function testShouldResolveContainerAware()
     {
-        $container = new Container([ContainerAware::class => ContainerAware::class]);
+        $container = new ServiceContainer([ContainerAware::class => ContainerAware::class]);
         $service = $container->get(ContainerAware::class);
         $this->assertSame($container, $service->container);
     }
@@ -94,7 +94,7 @@ class ContainerTest extends TestCase
     public function testShouldResolveWithAutowiring()
     {
         $foo = new Foo('fooString', new \stdClass);
-        $container = new Container([
+        $container = new ServiceContainer([
             Foo::class => fn () => $foo,
             FooInterface::class => Foo::class
         ]);
