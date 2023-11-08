@@ -12,7 +12,7 @@ composer install marcelomx/micro-container
 
 ```php
 
-use MicroContainer\Container;
+use MicroContainer\ServiceContainer;
 
 interface FooInterface
 {
@@ -40,44 +40,31 @@ class Baz
 }
 
 // Build container pass an array with dependencies definitions
-$container = new Container([
-    'foo.value' => 'Some value',
-    Foo::class => fn($c) => new Foo($c['foo.value']),
-    Bar::class => fn($c) => new Bar($c->get(Foo::class)),
-    // Auto wiring
-    Baz::class // Baz depends on Bar
-    // Service identification (alias)
+$container = new ServiceContainer([
+    // Callable factory
+    Foo::class => fn() => new Foo('foo', new \stdClass),
+    // Class string autoworing resolution
+    Bar::class => Bar::class,
+    // Service alias
     'foo.alias' => Foo::class,
     // Interface resolution
     FooInterface::class => Foo::class
 ]);
 
 $foo = $container->get(Foo::class);
+assert($foo instanceof Foo::class);
+assert($foo == $container->get('foo.alias'));
+
 $bar = $container->get(Bar::class);
+assert($bar instanceof Bar::class);
+assert($bar->foo === $foo);
+
+$service = $container->get(FooInterface::class);
+assert($service instanceof FooInterface::class);
+assert($foo == $service);
+
+// Autowiring non-defined service
 $baz = $container->get(Baz::class);
-
-// prints "Some value"
-echo $foo->value;
-
-if ($foo->value === $container->get('foo.value')) {
-    echo 'Yes, its the same value' . PHP_EOL;
-}
-
-if ($bar->foo === $foo) {
-    echo 'Yes, is same instance' . PHP_EOL;
-}
-
-if ($baz->bar === $bar) {
-    echo 'Yes, autowiring is working' . PHP_EOL;
-}
-
-if ($foo === $container->get('foo.alias')) {
-    echo 'Foo alias is same foo' . PHP_EOL;
-}
-
-if ($foo === $container->get(FooInterface::class)) {
-    echo 'FooInterface is foo too' . PHP_EOL;
-}
-
-
+assert($baz instanceof Baz::class);
+assert($baz->bar === $bar);
 ```
