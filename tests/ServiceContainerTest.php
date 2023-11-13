@@ -107,4 +107,15 @@ class ServiceContainerTest extends TestCase
         $this->assertInstanceOf(Bar::class, $service->bar);
         $this->assertSame($service->bar, $container->get(Bar::class));
     }
+
+    public function testShouldResolveVariadicTypedArgument()
+    {
+        $foo = new Foo('fooString', new \stdClass);
+        $container = new ServiceContainer([
+            Foo::class => fn () => $foo
+        ]);
+
+        $foov = $container->get(FooVariadic::class);
+        $this->assertInstanceOf(FooVariadic::class, $foov);
+    }
 }

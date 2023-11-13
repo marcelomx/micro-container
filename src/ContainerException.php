@@ -17,4 +17,9 @@ class ContainerException extends \Exception implements ContainerExceptionInterfa
     {
         return new static("Target '{$class}' is not instantiable");
     }
+
+    public static function unableToResolveParameter(\ReflectionParameter $parameter): static
+    {
+        return new static("Unable to resolve constructor parameter '{$parameter->name}'");
+    }
 }

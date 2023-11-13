@@ -42,3 +42,14 @@ class ContainerAware
     {
     }
 }
+
+
+class FooVariadic
+{
+    public array $foo = [];
+
+    public function __construct(Foo ...$foo)
+    {
+        $this->foo = $foo;
+    }
+}

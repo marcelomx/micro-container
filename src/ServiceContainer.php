@@ -55,36 +55,47 @@ class ServiceContainer implements ContainerInterface
         }
 
         try {
-            $reflectionClass = new \ReflectionClass($definition);
+            $reflection = new \ReflectionClass($definition);
         } catch (\ReflectionException) {
             throw ContainerException::classNotExists($definition);
         }
 
-        if (!$reflectionClass->isInstantiable()) {
+        if (!$reflection->isInstantiable()) {
             throw ContainerException::notInstantiable($definition);
         }
 
-        return new $definition(...$this->resolveDependencies(
-            $reflectionClass->getConstructor()?->getParameters() ?? []
+        if (null === ($construtor = $reflection->getConstructor())) {
+            return $reflection->newInstance();
+        }
+
+        return $reflection->newInstanceArgs(array_map(
+            $this->resolveParameter(...),
+            $construtor->getParameters()
         ));
     }
 
-    /** @param \ReflectionParameter[] $parameters */
-    private function resolveDependencies(array $parameters): array
+    private function resolveParameter(\ReflectionParameter $parameter): mixed
     {
-        $results = [];
+        /** @var \ReflectionNamedType */
+        if ($type = $parameter->getType()) {
+            $typeName = $type->getName();
 
-        foreach ($parameters as $parameter) {
-            /** @var \ReflectionNamedType */
-            $type = $parameter->getType();
+            if (!$type->isBuiltin()) {
+                return $this->get($typeName);
+            }
 
-            $results[] = match (true) {
-                $parameter->isDefaultValueAvailable() => $parameter->getDefaultValue(),
-                $parameter->isVariadic() => [],
-                default => $this->get($type->getName())
-            };
+            if (
+                ($typeName === 'array' && !$parameter->isDefaultValueAvailable()) ||
+                $parameter->isVariadic()
+            ) {
+                return [];
+            }
         }
 
-        return $results;
+        if ($parameter->isDefaultValueAvailable()) {
+            return $parameter->getDefaultValue();
+        }
+
+        throw ContainerException::unableToResolveParameter($parameter);
     }
 }
