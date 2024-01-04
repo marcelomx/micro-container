@@ -2,6 +2,7 @@
 
 namespace MicroContainer\Tests;
 
+use MicroContainer\Autowired;
 use Psr\Container\ContainerInterface;
 
 class Foo implements FooInterface
@@ -52,4 +53,26 @@ class FooVariadic
     {
         $this->foo = $foo;
     }
+}
+
+
+class FooAutowired
+{
+    #[Autowired]
+    private Foo $foo;
+
+    #[Autowired(service: Bar::class)]
+    public $bar;
+
+    public function getFoo(): Foo
+    {
+        return $this->foo;
+    }
+}
+
+
+class UnresolvableAutowired
+{
+    #[Autowired()]
+    public $foo;
 }

@@ -10,16 +10,33 @@ class ContainerException extends \Exception implements ContainerExceptionInterfa
 {
     public static function classNotExists(string $class): static
     {
-        return new static("Class '{$class}' not exists");
+        return new static(
+            "Class '{$class}' not exists"
+        );
     }
 
     public static function notInstantiable(string $class): static
     {
-        return new static("Target '{$class}' is not instantiable");
+        return new static(
+            "Target '{$class}' is not instantiable"
+        );
     }
 
     public static function unableToResolveParameter(\ReflectionParameter $parameter): static
     {
-        return new static("Unable to resolve constructor parameter '{$parameter->name}'");
+        return new static(sprintf(
+            "Unable to resolve '%s' constructor parameter: '%s'",
+            $parameter->getDeclaringClass()->name,
+            $parameter->name
+        ));
+    }
+
+    public static function unableToResolveAutowired(\ReflectionProperty $property): static
+    {
+        return new static(sprintf(
+            "Unable to resolve '%s' autowired property: '%s'",
+            $property->getDeclaringClass()->name,
+            $property->name
+        ));
     }
 }

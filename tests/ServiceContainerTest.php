@@ -118,4 +118,30 @@ class ServiceContainerTest extends TestCase
         $foov = $container->get(FooVariadic::class);
         $this->assertInstanceOf(FooVariadic::class, $foov);
     }
+
+    public function testShouldResolveAutowiredAttribute()
+    {
+        $foo = new Foo('fooString', new \stdClass);
+
+        $container = new ServiceContainer([
+            Foo::class => fn () => $foo
+        ]);
+
+        $fooa = $container->get(FooAutowired::class);
+        $this->assertInstanceOf(FooAutowired::class, $fooa);
+        $this->assertSame($foo, $fooa->getFoo());
+        $this->assertInstanceOf(Bar::class, $fooa->bar);
+    }
+
+    public function testShouldThrowsExceptionWhenAutowiredIsNotResolvable()
+    {
+        $expectedMessage = "Unable to resolve '" . UnresolvableAutowired::class . "' autowired property: 'foo'";
+
+        try {
+            $container = new ServiceContainer();
+            $container->get(UnresolvableAutowired::class);
+        } catch (NotFoundException $e) {
+            $this->assertEquals($expectedMessage, $e->getPrevious()?->getMessage());
+        }
+    }
 }

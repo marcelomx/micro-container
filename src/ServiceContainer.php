@@ -64,20 +64,25 @@ class ServiceContainer implements ContainerInterface
             throw ContainerException::notInstantiable($definition);
         }
 
-        if (null === ($construtor = $reflection->getConstructor())) {
-            return $reflection->newInstance();
+        $instance = $reflection->newInstanceArgs(array_map(
+            $this->resolveParameter(...),
+            $reflection->getConstructor()?->getParameters() ?? []
+        ));
+
+        foreach ($reflection->getProperties() as $property) {
+            $this->resolveAutowired($property, $instance);
         }
 
-        return $reflection->newInstanceArgs(array_map(
-            $this->resolveParameter(...),
-            $construtor->getParameters()
-        ));
+        return $instance;
     }
 
     private function resolveParameter(\ReflectionParameter $parameter): mixed
     {
-        /** @var \ReflectionNamedType */
         if ($type = $parameter->getType()) {
+            if (!$type instanceof \ReflectionNamedType) {
+                throw ContainerException::unableToResolveParameter($parameter);
+            }
+
             $typeName = $type->getName();
 
             if (!$type->isBuiltin()) {
@@ -97,5 +102,23 @@ class ServiceContainer implements ContainerInterface
         }
 
         throw ContainerException::unableToResolveParameter($parameter);
+    }
+
+    private function resolveAutowired(\ReflectionProperty $property, object $instance)
+    {
+        $attributes = $property->getAttributes(Autowired::class);
+
+        if (!$attributes) {
+            return;
+        }
+
+        $typeName = $attributes[0]->newInstance()->service
+            ?? $property->getType()?->getName();
+
+        if (!$typeName) {
+            throw ContainerException::unableToResolveAutowired($property);
+        }
+
+        $property->setValue($instance, $this->get($typeName));
     }
 }
