@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MicroContainer;
+namespace MicroContainer\Attributes;
 
 use Attribute;
 

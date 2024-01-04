@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
-namespace MicroContainer;
+namespace MicroContainer\Exceptions;
 
 use Psr\Container\ContainerExceptionInterface;
+
+use ReflectionParameter;
+use ReflectionProperty;
 
 class ContainerException extends \Exception implements ContainerExceptionInterface
 {
@@ -22,7 +25,7 @@ class ContainerException extends \Exception implements ContainerExceptionInterfa
         );
     }
 
-    public static function unableToResolveParameter(\ReflectionParameter $parameter): static
+    public static function unableToResolveParameter(ReflectionParameter $parameter): static
     {
         return new static(sprintf(
             "Unable to resolve '%s' constructor parameter: '%s'",
@@ -31,7 +34,7 @@ class ContainerException extends \Exception implements ContainerExceptionInterfa
         ));
     }
 
-    public static function unableToResolveAutowired(\ReflectionProperty $property): static
+    public static function unableToResolveAutowired(ReflectionProperty $property): static
     {
         return new static(sprintf(
             "Unable to resolve '%s' autowired property: '%s'",

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace MicroContainer;
 
+use MicroContainer\Attributes\Autowired;
+use MicroContainer\Exceptions\ContainerException;
+use MicroContainer\Exceptions\NotFoundException;
 use Psr\Container\ContainerInterface;
 
 class ServiceContainer implements ContainerInterface

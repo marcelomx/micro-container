@@ -2,7 +2,7 @@
 
 namespace MicroContainer\Tests;
 
-use MicroContainer\Autowired;
+use MicroContainer\Attributes\Autowired;
 use Psr\Container\ContainerInterface;
 
 class Foo implements FooInterface

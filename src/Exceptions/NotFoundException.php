@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
-namespace MicroContainer;
+namespace MicroContainer\Exceptions;
 
 use Psr\Container\NotFoundExceptionInterface;
 
-class NotFoundException extends \Exception implements NotFoundExceptionInterface
+use Exception;
+use Throwable;
+
+class NotFoundException extends Exception implements NotFoundExceptionInterface
 {
-    public static function forEntry(string $id, ?\Throwable $previous = null): static
+    public static function forEntry(string $id, ?Throwable $previous = null): static
     {
         if ($previous instanceof self) {
             return $previous;

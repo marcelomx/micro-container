@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace MicroContainer\Tests;
 
 use MicroContainer\ServiceContainer;
-use MicroContainer\NotFoundException;
+use MicroContainer\Exceptions\NotFoundException;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\NotFoundExceptionInterface;
 
