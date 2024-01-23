@@ -107,7 +107,7 @@ class ServiceContainer implements ContainerInterface
         throw ContainerException::unableToResolveParameter($parameter);
     }
 
-    private function resolveAutowired(\ReflectionProperty $property, object $instance)
+    private function resolveAutowired(\ReflectionProperty $property, object $instance): void
     {
         $attributes = $property->getAttributes(Autowired::class);
 
