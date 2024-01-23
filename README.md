@@ -89,7 +89,7 @@ Feel free to customize and expand on this basic setup to meet the specific requi
 
 ## Copyright
 
-Micro Container is open-source software released under the [MIT License](LICENSE). © [Your Name or Organization].
+Micro Container is open-source software released under the [MIT License](LICENSE).
 
 ## Contribution
 
