@@ -1,7 +1,7 @@
 {
     "name": "marcelomx/micro-container",
     "description": "A micro Dependency Injection Container",
-    "version": "0.1",
+    "version": "1.0.0-beta",
     "type": "library",
     "license": "MIT",
     "authors": [
